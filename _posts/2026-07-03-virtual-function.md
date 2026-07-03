@@ -138,7 +138,7 @@ p->func();
 
 虽然 `p` 是 `Base*`，但对象里的 `vptr` 指向 `Derived` 的 `vtable`，最终调用到 `Derived::func()`。
 
-![1783060302276](../assets/image/2026-07-03-virtual-function/1783060302276.png)
+![1783060302276](../assets/img/2026-07-03-virtual-function/1783060302276.png)
 
 上面Animal类的例子中，虽然容器里全是 `Animal*`，但每个指针指向的实际对象不同。
 每个对象内部的 `vptr` 也不同，分别指向 Animal/Wolf/Fish/GoldFish/OtherAnimal 各自的 vtable。
