@@ -5,13 +5,13 @@ categories: [技术]
 tags: [C++, 智能指针]
 pin: true
 ---
-
 ## 指针
 
 ## 智能指针
 
 在C++中，**智能指针**本质上是一个“像指针一样使用的对象”，通过RAII（Resource Acquistion is Initialization，资源获取即初始化）技术自动管理分配资源的生命周期。避免手工new/delete可能带来的资源泄漏问题。RAII是C++98中最重要的技术之一，想法就是每个资源都应该有一个所有者，它由作用域对象表示：构造函数获取资源、析构函数隐式地释放它。
 传统的裸指针，在下面的例子中。如果在delete之前发生异常，就会导致p所指向的内存得不到释放，造成内存泄露。
+
 ```c++
 void func()
 {
@@ -22,7 +22,9 @@ void func()
     delete p;
 }
 ```
+
 智能指针，把资源管理封装到对象中。
+
 ```c++
 void func()
 {
@@ -31,7 +33,9 @@ void func()
     throw std::runtime_error("error");
 }
 ```
+
 当函数退出时，自动释放资源。
+
 ```c++
 ~unique_ptr();
 ```
@@ -71,6 +75,7 @@ int main() {
 ```
 
 输出:
+
 ```
 === 1) Copy transfers ownership unexpectedly ===
 p1 is now NULL after copy (surprising copy semantics)
@@ -78,6 +83,7 @@ Widget 1
 ```
 
 如果将`p1->hello();`放开执行，则输出如下:
+
 ```
 === 1) Copy transfers ownership unexpectedly ===
 p1 is now NULL after copy (surprising copy semantics)
@@ -90,15 +96,18 @@ p2=p1, 大家普遍认为p1还在，p2只是副本，但实际上p1被清空，p
 因引存在以下几个的典型问题。
 
 - 1 容器无法使用
-STL容器要求拷贝不能改变源对象。
+  STL容器要求拷贝不能改变源对象。
+
 ```c++
 std::vector<std::auto_ptr<int>> vec;
 std::sort(vec.begin(), vec.end()); // 排序过程中不断拷贝，元素源对象被置空
 ```
+
 结果不可预测。因此，auto_ptr与stl容器天然不兼容。
 
 - 2 函数传参容易踩坑
-传参发生拷贝，p对象所有权被转移没了，调用后p为空指针。
+  传参发生拷贝，p对象所有权被转移没了，调用后p为空指针。
+
 ```c++
 void func(std::auto_ptr<int> p)
 {
@@ -108,11 +117,13 @@ void func(std::auto_ptr<int> p)
 std::auto_ptr<int> p (new int(10));
 func(p); // 所有权从 p 转移到 func 的形参 p
 ```
+
 很多人会误以为，只是按值传递。实际上是对象没了。
 
 - 3 异常和泛型编程中行为反直觉
-对于普通对象，`process(x)`不会修改x。但若 `T = auto_ptr`, 调用后，x会失效。
-破坏了泛型编程最基本的语义。
+  对于普通对象，`process(x)`不会修改x。但若 `T = auto_ptr`, 调用后，x会失效。
+  破坏了泛型编程最基本的语义。
+
 ```c++
 template<typename T>
 void process(T obj)
@@ -121,8 +132,10 @@ void process(T obj)
 ```
 
 ## unique_ptr
+
 为了解决auto_ptr存在的问题，C++11通过引入移动语义`T(T&&)`以及`std::move()`，设计了unique_ptr。
 其特点是**禁止拷贝**
+
 ```c++
 unique_ptr<int> p1 (new int(10));
 unique_ptr<int> p2 = p1; // 编译错误
@@ -132,6 +145,7 @@ unique_ptr<int> p2 = p1; // 编译错误
 ```
 
 必须**显式移动**,明确我要转移所有权。
+
 ```c++
 std::unique_ptr<int> p2 = std::move(p1);
 
@@ -145,6 +159,7 @@ p1.reset(); //实际上什么都没做。
 uniqeu_ptr 解决的是“生命周期唯一所有者”的问题，而 shared_ptr 解决的是“多个对象共同拥有一个资源”的问题。
 uniqeu_ptr 的局限性是一个资源只能有一个主人。现实场景中可能存在多个对象共同拥有一个资源的场景。
 比如Company,Department都需要访问 Employee 这个对象，谁来负责释放Employee？如果使用裸指针，很容易重复释放，提前释放。而`unique_ptr`又只能有一个拥有者。这时候就需要`shared_ptr<Employee>`,共享指针其核心是共享所有权, 通过**引用计数**进行管理。谁最后离开，谁触发释放。
+
 ```c++
 auto p1 = std::make_shared<int>(100);
 auto p2 = p1;
@@ -154,14 +169,17 @@ p1.reset(); count = 2
 p2.reset(); count = 1
 p3.reset(); count = 0 // delete object
 ```
+
 shared_ptr 的代价是引用计数，每次拷贝需要refCount++，每次释放refCount-- 。
 在多线程环境下，还要保证线程安全。因此，shared_ptr 比 unique_ptr 慢。
+
 ```c++
 atomic++
 atomic--
 ```
 
 此外，shared_ptr还引入了新问题，循环引用（Cycle Reference）。
+
 ```c++
 #include <iostream>
 #include <memory>
@@ -196,7 +214,9 @@ int main() {
     return 0;
 }
 ```
+
 输出如下, 析构日志不能触发，将造成内存泄漏。
+
 ```
 a use_count = 2
 b use_count = 2
@@ -205,16 +225,20 @@ end
 
 
 ## weak_ptr
+
 为了打破shared_ptr存在的这种循环，引入了weak_ptr。
 weak_ptr的特点是，观察对象，但不拥有对象。那**不增加引用计数**。
 将上面shared_ptr的代码稍做修改
+
 ```c++
 struct B {
     std::weak_ptr<A> aptr;
     ~B() { std::cout << "B destroyed\n"; }
 };
 ```
+
 输出如下，可见析构日志得以顺利触发。
+
 ```
 a use_count = 1
 b use_count = 2
@@ -262,7 +286,9 @@ int main() {
     return 0;
 }
 ```
+
 输出：
+
 ```
 Node ctor
 inside scope, value = 42
@@ -271,6 +297,7 @@ object expired, safe to know it's gone
 ```
 
 再看一个例子[1]，加深印象，详见注释。
+
 ```c++
 std::shared_ptr<int> p1(new int(5));
 std::weak_ptr<int> wp1 = p1; // 还是只有p1有所有权。
@@ -297,6 +324,12 @@ if（p3）
 现代 C++ 最佳实践基本就是：
 优先 unique_ptr，确实存在多个所有者时使用 shared_ptr，出现观察关系或循环引用风险时使用 weak_ptr。
 
+| unique_ptr       | shared_ptr   | weak_ptr         |
+| ---------------- | ------------ | ---------------- |
+| 资源唯一拥有者   | GUI组件树    | 父子节点互相引用 |
+| 工厂模式返回对象 | 插件系统     | 发布/订阅模式    |
+| RAII资源管理     | 任务调度系统 | Observer模式     |
+|                  | 对象缓存     | 打破循环引用     |
 
 ## 扩展阅读
 
