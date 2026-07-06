@@ -5,8 +5,6 @@ categories: [技术]
 tags: [C++, 智能指针]
 pin: true
 ---
-## 指针
-
 ## 智能指针
 
 在C++中，**智能指针**本质上是一个“像指针一样使用的对象”，通过RAII（Resource Acquistion is Initialization，资源获取即初始化）技术自动管理分配资源的生命周期。避免手工new/delete可能带来的资源泄漏问题。RAII是C++98中最重要的技术之一，想法就是每个资源都应该有一个所有者，它由作用域对象表示：构造函数获取资源、析构函数隐式地释放它。
@@ -91,6 +89,8 @@ Segmentation fault (core dumped)
 ```
 
 **auto_ptr 违背了程序员对“拷贝”的直觉。**
+
+
 p2=p1, 大家普遍认为p1还在，p2只是副本，但实际上p1被清空，p2接管资源。
 
 因引存在以下几个的典型问题。
@@ -313,7 +313,7 @@ std::weak_ptr<int> wp1 = p1; // 还是只有p1有所有权。
 p1.reset(); // 内存被释放。
 
 std::shared_ptr<int> p3 = wp1.lock(); // 因为内存已经被释放了，所以得到的是空指针。
-if（p3）
+if (p3)
 {
   // 不会执行到这。
 }
