@@ -7,7 +7,7 @@ pin: true
 ---
 ## 什么是内存模型
 
-Memory Model，是C++ 11引入的一个重要概念，它定义了
+Memory Model，是C++ 11引入的一个重要概念，它定义了：
 
 > 多线程环境下，不同线程如何观察内存，以及编译器和CPU可以做哪些优化。
 
@@ -79,11 +79,9 @@ std::cout << data;
  实际相当于`lock, read, modify, write, unlock`。
  这样一来，多个线程的`cnt++`就不会发生覆盖。
 
-
 ### 3 修改顺序
 
 * Modification Order: 每个原子变量都有自己的修改顺序。所有线程看到该变量所有写操作的顺序必须是一致的。哪怕线程A看到的比线程B慢，但他们看到的数值演变方向必须是一致的。
-
 
 ## 内存顺序（Memory Order）
 
@@ -141,6 +139,27 @@ counter = 2000000 (期望 2000000)
 代价： 性能损耗最大（会插入大量的内存屏障/Memory Barrier指令）。
 
 ```c++
+class PetersonLock {
+public:
+    // me 只能是 0 或 1, 是"我"的编号, 另一个线程编号是 1-me
+    void lock(int me) {
+        int other = 1 - me;
+        flag_[me].store(true, std::memory_order_seq_cst);   // "我要进临界区了"
+        turn_.store(other, std::memory_order_seq_cst);       // "如果有争用, 优先让对方进"
+        // 只要对方也想进(flag_[other]==true) 且当前轮到对方(turn_==other), 就一直等
+        while (flag_[other].load(std::memory_order_seq_cst) &&
+               turn_.load(std::memory_order_seq_cst) == other) {
+            // busy wait
+        }
+    }
+    void unlock(int me) {
+        flag_[me].store(false, std::memory_order_seq_cst);  // "我出临界区了"
+    }
+private:
+    std::atomic<bool> flag_[2]{false, false};
+    std::atomic<int> turn_{0};
+};
+
 void demo_pure_seq_cst() {
     section("2. memory_order_seq_cst 示例 —— Peterson 互斥锁(全程只用 seq_cst)");
 
@@ -375,10 +394,12 @@ private:
     static std::mutex mtx;
 };
 ```
+
 第一次检查，避免每次都加锁。
 第二次检查，防止多个线程同时创建对象。
 上面这个代码的问题在于，`instance = new Singleton();` 这句话不是一个原子操作。
 理想顺序是：allocate -> construct -> publish pointer , 但实际可能发生重排序， allocate -> publish pointer -> construct 。
+
 ```c++
 memory = operator new(...)
 Singleton(memory)
@@ -388,7 +409,9 @@ memory = operator new(...)
 instance = memory      // 提前发布
 Singleton(memory)      // 还在构造
 ```
+
 假设两个线程
+
 ```c++
 # Thread A
 instance = new Singleton(); // allocate , publich pointer, 
@@ -400,11 +423,13 @@ if(instance != nullptr)
     return instance; // 此时对象可能构造函数还没执行完，成员变量还没初始化
 }
 ```
+
 本质的问题，**对象地址已可见 ≠ 对象状态已可见**。
 这就是一个典型的内存模型问题，因为这里缺少**happens before**关系。
 线程A的写到线程B的读之间如果没有同步机制，则不存在happens-before。行为是未定义。
 
 以下的修复代码，利用原子变量，通过
+
 ```
 release
     ↓
@@ -412,7 +437,9 @@ synchronizes-with
     ↓
 acquire
 ```
+
 来保证
+
 ```
 构造完成
     happens-before
@@ -471,7 +498,6 @@ C++11 标准明确写了这句话（大意）：
 > 如果控制流并发地进入一个正在初始化的局部 static 变量声明，并发的执行必须等待该初始化完成。
 
 也就是说，**函数局部 static 变量的"线程安全初始化 + 只初始化一次"是语言标准直接保证的**，不需要你手写任何原子操作或锁——编译器会替你生成。
-
 
 ## 总结
 
