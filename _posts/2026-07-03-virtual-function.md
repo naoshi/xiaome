@@ -2,7 +2,7 @@
 title: 虚函数那些事儿
 date: 2026-07-03 10:00:00 +0800
 categories: [技术]
-tags: [C++, 多态]
+tags: [C++, 多态, 虚函数]
 pin: true
 ---
 ## 定义

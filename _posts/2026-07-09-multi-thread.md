@@ -2,7 +2,7 @@
 title: 多线程
 date: 2026-07-09 10:00:00 +0800
 categories: [技术]
-tags: [C++， 线程安全， 锁]
+tags: [C++, 线程安全, 锁]
 pin: true
 ---
 

@@ -2,7 +2,7 @@
 title: 内存模型
 date: 2026-07-15 10:00:00 +0800
 categories: [技术]
-tags: [C++， Memory Model， Memory Order]
+tags: [C++, Memory Model, Memory Order]
 pin: true
 ---
 ## 什么是内存模型
@@ -36,11 +36,11 @@ int b = 2;
 int data = 0;
 bool ready = false;
 
-# Thread A
+// Thread A
 data = 100;
 ready = true;
 
-# Thread B
+// Thread B
 while(!ready);
 std::cout << data;
 ```
@@ -62,10 +62,10 @@ std::cout << data;
 
 ```c++
  int x = 0;
- # Thread 1
+ // Thread 1
  x++;
 
- # Thread 2
+ // Thread 2
  x++;
 ```
 
